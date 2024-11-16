@@ -449,7 +449,7 @@ else:
     STATIC_ROOT = '/static'
 
     MEDIA_URL = '/media/'
-    MEDIA_ROOT = '/media'
+    MEDIA_ROOT = f"{BASE_DIR}/media"
 
 STATICFILES_DIRS = [
     os.path.join(APPS_DIR, 'static'),

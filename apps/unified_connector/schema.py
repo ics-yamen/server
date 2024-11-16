@@ -226,12 +226,14 @@ class UnifiedConnectorQueryType(graphene.ObjectType):
             Q(blocked=True) |
             Q(already_added=True)
         )
+        print('fuccccccccccccccccck')
         if PP.check_permission(info, PP.Permission.VIEW_UNIFIED_CONNECTOR):
             return qs.count()
         return
 
     @staticmethod
     def resolve_unified_connectors(root, info, **kwargs) -> QuerySet:
+
         return get_unified_connector_qs(info)
 
     @staticmethod

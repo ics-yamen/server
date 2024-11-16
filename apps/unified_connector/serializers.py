@@ -74,6 +74,7 @@ class UnifiedConnectorWithSourceGqSerializer(UnifiedConnectorGqSerializer):
         return qs.none()  # On create throw error if existing id is provided
 
     def validate_sources(self, sources):
+        print('aaaaaaaaaaaaaa', sources)
         source_found = set()
         # Only allow unique source per unified connectors
         for source in sources:
@@ -81,6 +82,7 @@ class UnifiedConnectorWithSourceGqSerializer(UnifiedConnectorGqSerializer):
             if source_type in source_found:
                 raise serializers.ValidationError(f'Multiple connector found for {source_type}')
             source_found.add(source_type)
+        print('aaaaaaaaaaaaaa', source_found)
         return sources
 
 

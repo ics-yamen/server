@@ -89,6 +89,7 @@ class PDNA(Source):
         return resp.text
 
     def fetch(self, params):
+        print('ffffffffffffffffff', params)
         country = params.get('country')
         if not country:
             return [], 0
@@ -119,9 +120,12 @@ class PDNA(Source):
                             'source_type': Lead.SourceType.WEBSITE,
                         }
                         results.append(data)
+
                 except Exception as e:
                     logger.warning(
                         "Exception parsing {} with params {}: {}".format(
                             self.URL, params, e.args)
                     )
+        print('ffffffffffffffffff the fucking results are:', results)
+
         return results, len(results)
