@@ -405,8 +405,9 @@ GALLERY_FILE_EXPIRE = 60 * 60 * 24 * 2
 
 if env('DJANGO_USE_S3'):
     # AWS S3 Bucket Credentials
-    AWS_STORAGE_BUCKET_NAME_STATIC = env('AWS_STORAGE_BUCKET_NAME_STATIC')
-    AWS_STORAGE_BUCKET_NAME_MEDIA = env('AWS_STORAGE_BUCKET_NAME_MEDIA')
+    AWS_STORAGE_BUCKET_NAME = 'deep-s3-bucket'
+    AWS_STORAGE_BUCKET_NAME_STATIC = env('AWS_STORAGE_BUCKET_NAME_STATIC', default='documents')
+    AWS_STORAGE_BUCKET_NAME_MEDIA = env('AWS_STORAGE_BUCKET_NAME_MEDIA', default='documents')
     # If environment variable are not provided, then EC2 Role will be used.
     AWS_S3_SECRET = (
         env.json('DEEP_BUCKET_ACCESS_USER_SECRET') or
@@ -419,14 +420,15 @@ if env('DJANGO_USE_S3'):
         AWS_ACCESS_KEY_ID = AWS_S3_SECRET['AccessKeyId']
         AWS_SECRET_ACCESS_KEY = AWS_S3_SECRET['SecretAccessKey']
     else:
-        AWS_ACCESS_KEY_ID = env('S3_AWS_ACCESS_KEY_ID')
-        AWS_SECRET_ACCESS_KEY = env('S3_AWS_SECRET_ACCESS_KEY')
+        AWS_ACCESS_KEY_ID = env('S3_AWS_ACCESS_KEY_ID', default="AKIA2I3RVCCCMX2VGJM7")
+        AWS_SECRET_ACCESS_KEY = env('S3_AWS_SECRET_ACCESS_KEY', default="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")
     AWS_S3_ENDPOINT_URL = env('S3_AWS_ENDPOINT_URL') if DEBUG else None
 
     AWS_S3_FILE_OVERWRITE = False
     AWS_DEFAULT_ACL = 'private'
     AWS_QUERYSTRING_AUTH = True
-    AWS_S3_CUSTOM_DOMAIN = None
+    AWS_S3_CUSTOM_DOMAIN =  f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+    AWS_S3_REGION_NAME = 'us-east-1'
     AWS_QUERYSTRING_EXPIRE = GALLERY_FILE_EXPIRE
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_IS_GZIPPED = True
@@ -443,13 +445,14 @@ if env('DJANGO_USE_S3'):
     # Media configuration
     MEDIAFILES_LOCATION = 'media'
     MEDIA_URL = "https://%s/%s/" % (AWS_S3_CUSTOM_DOMAIN, MEDIAFILES_LOCATION)
-    DEFAULT_FILE_STORAGE = 'deep.s3_storages.MediaStorage'
+    # DEFAULT_FILE_STORAGE = 'deep.s3_storages.MediaStorage'
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 else:
     STATIC_URL = '/static/'
     STATIC_ROOT = '/static'
 
     MEDIA_URL = '/media/'
-    MEDIA_ROOT = f"{BASE_DIR}/media"
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATICFILES_DIRS = [
     os.path.join(APPS_DIR, 'static'),

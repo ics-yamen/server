@@ -12,13 +12,15 @@ from io import BytesIO
 from django.template.loader import render_to_string
 from weasyprint import HTML
 
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 logger = logging.getLogger(__name__)
 
 
 @ConnectorWrapper
 class Kobo(Source):
-    # api_url = f"https://kf.kobotoolbox.org/api/v2/assets/{project_id}/data/?format=json"
+
     URL = 'https://kf.kobotoolbox.org/api/v2/assets/'
     title = 'KoboToolbox Reports'
     key = 'kobo-toolbox'
@@ -49,7 +51,7 @@ class Kobo(Source):
         except requests.RequestException as e:
             logger.critical("A critical error occurred while fetching data: %s", e)
         return []
-    #
+
     def fetch(self, params):
         logger.info(f'fetching for kobo commenced with params {params}')
         result = []
@@ -61,7 +63,7 @@ class Kobo(Source):
         if not token:
             return [], 0
 
-    #
+
         try:
             records = self.get_content(project_id, token)
             if records:
@@ -71,18 +73,22 @@ class Kobo(Source):
                     'columns': qualitative_columns,
                     'rows': rows,
                 }
-                logger.info(f'the columns are {qualitative_columns}')
-                #
+
                 html_string = render_to_string('connector/pdf.html', context)
-                pdf_file = HTML(string=html_string).write_pdf()
+
+                html = HTML(string=html_string)
+                pdf_file = html.write_pdf()
+
                 pdf_stream = BytesIO(pdf_file)
-                file_path = pdf_save_path_and_url(self.request.user, project_id, pdf_file=pdf_stream)
+
+                file_path = pdf_save_path_and_url(project_id, context, pdf_file=pdf_stream)
+                print(f'the media url is {settings.MEDIA_URL} and the media files location is {settings.MEDIAFILES_LOCATION}')
                 file_url = os.path.join(settings.MEDIA_URL, file_path)
 
                 date = datetime.now()
                 result = [{
                      'title': project_id,
-                     'url': "file_url",
+                     'url': file_url,
                      'source': 'KoboToolbox',
                      'author': 'KoboToolbox',
                      'published_on': date.date(),
@@ -97,30 +103,42 @@ class Kobo(Source):
 
 
 
-def pdf_save_path_and_url(user, project_id, connector_id=1, pdf_file=None):
-    from django.core.files.storage import FileSystemStorage
-    username = user.username
-    user_id = user.id
+def pdf_save_path_and_url(project_id, context, pdf_file):
     project_id = project_id
-    connector_id = connector_id
     timestamp = datetime.now().strftime('%Y%m%dT%H%M%S')
-
+    import uuid, csv
     directory_path = os.path.join(
-        'PDFS',
-        f"{username}-{user_id}",
-        str(connector_id),
         str(project_id),
-        f"{timestamp}.pdf"
+        str(timestamp),
     )
+    pdf_directory_path = os.path.join("pdf", directory_path)
     os.makedirs(directory_path, exist_ok=True)
-    file_path = os.path.join(directory_path, f"{timestamp}.pdf")
-
+    file_id = uuid.uuid4()
+    pdf_file_path = os.path.join(pdf_directory_path, f"{file_id}.pdf")
     def save_pdf():
-        fs = FileSystemStorage(location=directory_path)
-        fs.save(f"{timestamp}.pdf", pdf_file)
+        file_path = os.path.join(settings.MEDIAFILES_LOCATION, pdf_directory_path, f"{file_id}.pdf")
+        default_storage.save(file_path, ContentFile(pdf_file.getvalue()))
     save_pdf()
 
-    return file_path
+    csv_directory_path = os.path.join(settings.MEDIAFILES_LOCATION, "csv", directory_path)
+    csv_file_path = os.path.join(csv_directory_path, f"{file_id}.csv")
+
+    def save_csv():
+        import io
+        csv_buffer = io.StringIO()
+
+        writer = csv.writer(csv_buffer)
+        writer.writerow(context['columns'])
+        for row in context['rows']:
+            writer.writerow(row)
+
+        csv_content = ContentFile(csv_buffer.getvalue().encode('utf-8'))
+        default_storage.save(csv_file_path, csv_content)
+
+    save_csv()
+
+    return pdf_file_path
+
 
 def accumulate_columns_and_rows(records):
     """Accumulate all columns from the records and filter qualitative columns."""

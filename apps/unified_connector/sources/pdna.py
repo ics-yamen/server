@@ -126,6 +126,4 @@ class PDNA(Source):
                         "Exception parsing {} with params {}: {}".format(
                             self.URL, params, e.args)
                     )
-        print('ffffffffffffffffff the fucking results are:', results)
-
         return results, len(results)
